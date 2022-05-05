@@ -16,7 +16,7 @@ from cap.article_constr import (
     parse_xml
 )
 from cap.constants import CHAR_TO_HTML_LBS
-from cap.io import get_file_paths
+from cap.io import get_file_paths, save_html_results, save_jsonl_results
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +30,19 @@ class ArticleProcessingArgs:
         default='./output',
         metadata={"help": "The output folder where the validation results and relevant information is saved."},
     )
+    output_type: Optional[str] = field(
+        default='pt',
+        metadata={
+            "choices": ["pt", "html", "jsonl"],
+            "help": "output type"
+        }
+    )
     log_file: Optional[str] = field(
         default=None,
         metadata={"help": "the directory of the log file. Set to '' to disable logging"}
     )
     skip_dois_path: Optional[str] = field(
-        default='./data/seqcx-anno/exist-dois.json',
+        default='',
         metadata={'help': 'load existing dois (optional).'}
     )
     debug_mode: Optional[bool] = field(
@@ -49,9 +56,12 @@ def process_articles(args: ArticleProcessingArgs):
 
     logging_args(args)
 
-    logger.info("Getting article paths")
-    file_list = get_file_paths(args.input_dir)
-    logger.info(f"{len(file_list)} articles to be processed")
+    if os.path.isfile(args.input_dir):
+        file_list = [args.input_dir]
+    else:
+        logger.info("Getting article paths")
+        file_list = get_file_paths(args.input_dir)
+        logger.info(f"{len(file_list)} articles to be processed")
 
     if os.path.isfile(args.skip_dois_path):
         with open(args.skip_dois_path, 'r', encoding='utf-8') as f:
@@ -88,18 +98,32 @@ def process_articles(args: ArticleProcessingArgs):
             continue
 
         try:
-            # save parsed article
             save_dir = os.path.normpath(os.path.abspath(file_path)).split(os.sep)
             save_dir[-2] += '_processed'
-            save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.pt"
-            save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
-            if not os.path.isdir(os.path.split(save_path)[0]):
-                os.makedirs(os.path.split(save_path)[0])
-            with open(save_path, 'wb') as handle:
-                pickle.dump(article, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+            # save parsed article as pt
+            if args.output_type == 'pt':
+                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.pt"
+                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
+                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
+                with open(save_path, 'wb') as handle:
+                    pickle.dump(article, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+            # save parsed article as html
+            elif args.output_type == 'html':
+                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.html"
+                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
+                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
+                save_html_results(save_path, article)
+
+            elif args.output_type == 'jsonl':
+                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.jsonl"
+                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
+                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
+                save_jsonl_results(save_path, article)
 
         except Exception as e:
-            logger.error(f"Failed to save results. Error: {e}")
+            logger.exception(f"Failed to save results. Error: {e}")
             continue
 
         if args.debug_mode and file_idx >= 5:

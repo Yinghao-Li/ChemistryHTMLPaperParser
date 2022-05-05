@@ -15,75 +15,11 @@ try:
     import pyautogui
     import shutil
     from selenium import webdriver
+    from selenium.webdriver.common.by import By
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.common.exceptions import NoSuchElementException
 except KeyError:
     pass
-
-
-DEFAULT_HTML_STYLE = """
-head {
-  width: 85%;
-  margin:auto auto;
-}
-
-body {
-  width: 85%;
-  margin:auto auto;
-}
-
-div {
-  width: 100%;
-  margin:auto auto;
-}
-
-p {
-  text-align: justify;
-  text-justify: inter-word;
-}
-
-.polymer {
-background-color: lightblue;
-color: black;
-}
-
-table {
-  font-family: arial, sans-serif;
-  border-collapse: collapse;
-  width: 90%;
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 1.5em;
-  margin-bottom: 1.5em;
-}
-
-caption {
-  margin-bottom: 0.5em;
-}
-
-tbody td, th {
-  border: 1px solid #dddddd;
-  text-align: left;
-  padding: 8px;
-  font-size: 80%;
-}
-
-tbody tr:nth-child(even) {
-  background-color: #dddddd;
-}
-
-tfoot td, th{
-  border: none;
-  text-align: left;
-  padding: 8px;
-  font-size: 70%;
-  line-height: 100%;
-}
-
-tfoot tr {
-  background-color: #ffffff;
-}
-"""
 
 
 def scroll_down(driver_var, value):
@@ -127,7 +63,7 @@ def download_article_windows(doi, download_path, driver_path=None):
 
     if doi.startswith('10.1039'):
         try:
-            driver.find_element_by_link_text('Article HTML').click()
+            driver.find_element(By.LINK_TEXT, 'Article HTML').click()
             scroll_down_page(driver)
         except NoSuchElementException:
             pass
@@ -181,12 +117,14 @@ def save_html_results(save_path: str,
     article: article where the table appears
     html_style: html style
     tags_to_highlight: annotation tags to be highlighted
-    tags_to_present: annotation tags to be presented
+    tags_to_present: annotation tags to present
 
     Returns
     -------
     None
     """
+    tags_to_highlight = list() if tags_to_highlight is None else tags_to_highlight
+    tags_to_present = list() if tags_to_present is None else tags_to_present
 
     soup = BeautifulSoup()
     head = soup.new_tag('head')
@@ -351,3 +289,56 @@ def get_file_paths(input_dir: str):
     else:
         raise FileNotFoundError("Input file does not exist!")
     return file_list
+
+
+def save_jsonl_results(save_file,
+                       article: Article):
+
+    txt_lines = ''
+    doi = article.doi
+
+    txt_lines += f"doi: {doi}\n"
+    global_spans = {}
+
+    if article.title:
+        txt_lines += f"title: {article.title.text}\n\n"
+
+    if article.abstract:
+        txt_lines += f"Abstract:\n\n"
+        abstract = article.abstract.text
+
+        for (s, e), v in article.abstract.base_anno.items():
+            if v not in global_spans:
+                global_spans[v] = list()
+            global_spans[v].append((s + len(txt_lines),
+                                    e + len(txt_lines)))
+        txt_lines += f"{abstract}\n"
+
+    if article.sections:
+        for section in article.sections:
+
+            if section.type == ArticleElementType.SECTION_TITLE:
+                txt_lines += f"\n{section.content}\n\n"
+
+            elif section.type == ArticleElementType.PARAGRAPH:
+                para = section.content
+                for (s, e), v in para.base_anno.items():
+                    if v not in global_spans:
+                        global_spans[v] = list()
+                    global_spans[v].append((s + len(txt_lines), e + len(txt_lines)))
+                txt_lines += f"{section.content.text}\n\n"
+
+    txt_lines = txt_lines.rstrip()
+    labels_list = list()
+    for k, spans in global_spans.items():
+        for span in spans:
+            labels_list.append([span[0], span[1], k])
+
+    result_dict = {
+        'text': txt_lines,
+        'label': labels_list,
+        'doi': doi
+    }
+    with open(save_file, 'w', encoding='utf-8') as f:
+        json.dump(result_dict, f, ensure_ascii=False)
+    return result_dict

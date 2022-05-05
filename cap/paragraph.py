@@ -2,8 +2,9 @@ import copy
 import logging
 import functools
 from typing import Optional, List, Union, Dict, Callable, Tuple
-from seqlbtoolkit.eval import Metric
 from collections import OrderedDict
+
+from seqlbtoolkit.base_model.eval import Metric
 
 logger = logging.getLogger(__name__)
 
