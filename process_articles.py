@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import pickle
 import logging
 from datetime import datetime
 from transformers import HfArgumentParser
@@ -16,7 +15,7 @@ from cap.article_constr import (
     parse_xml
 )
 from cap.constants import CHAR_TO_HTML_LBS
-from cap.io import get_file_paths, save_html_results, save_jsonl_results
+from cap.io import get_file_paths
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +36,7 @@ class ArticleProcessingArgs:
             "help": "output type"
         }
     )
-    log_file: Optional[str] = field(
+    log_path: Optional[str] = field(
         default=None,
         metadata={"help": "the directory of the log file. Set to '' to disable logging"}
     )
@@ -51,7 +50,7 @@ class ArticleProcessingArgs:
 
 
 def process_articles(args: ArticleProcessingArgs):
-    set_logging(args.log_file)
+    set_logging(args.log_path)
     logger.setLevel(logging.INFO)
 
     logging_args(args)
@@ -101,26 +100,11 @@ def process_articles(args: ArticleProcessingArgs):
             save_dir = os.path.normpath(os.path.abspath(file_path)).split(os.sep)
             save_dir[-2] += '_processed'
 
-            # save parsed article as pt
-            if args.output_type == 'pt':
-                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.pt"
-                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
-                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
-                with open(save_path, 'wb') as handle:
-                    pickle.dump(article, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-            # save parsed article as html
-            elif args.output_type == 'html':
-                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.html"
-                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
-                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
-                save_html_results(save_path, article)
-
-            elif args.output_type == 'jsonl':
-                save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.jsonl"
-                save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
-                os.makedirs(os.path.split(save_path)[0], exist_ok=True)
-                save_jsonl_results(save_path, article)
+            # save article to disk with specified file type
+            save_dir[-1] = f"{substring_mapping(article.doi, CHAR_TO_HTML_LBS)}.{args.output_type}"
+            save_path = os.path.normpath(os.path.join(args.output_dir, os.sep.join(save_dir[-2:])))
+            os.makedirs(os.path.split(save_path)[0], exist_ok=True)
+            getattr(article, f"save_{args.output_type}")(save_path)
 
         except Exception as e:
             logger.exception(f"Failed to save results. Error: {e}")
@@ -149,7 +133,7 @@ if __name__ == '__main__':
     else:
         article_args, = parser.parse_args_into_dataclasses()
 
-    if article_args.log_file is None:
-        article_args.log_file = os.path.join('logs', f'{_current_file_name}.{_time}.log')
+    if article_args.log_path is None:
+        article_args.log_path = os.path.join('logs', f'{_current_file_name}.{_time}.log')
 
     process_articles(args=article_args)
