@@ -1,5 +1,6 @@
 import os
 import time
+from typing import Optional
 
 try:
     import pyautogui
@@ -9,6 +10,7 @@ try:
     from selenium.webdriver.common.by import By
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.chrome.webdriver import WebDriver
+    from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.common.exceptions import WebDriverException, NoSuchElementException
 except KeyError:
@@ -97,7 +99,7 @@ def download_article_headless(doi, save_path):
     driver.get(article_url)
 
 
-def load_webdriver() -> WebDriver:
+def load_webdriver(headless: Optional[bool] = True) -> WebDriver:
     """
     A more robust way to load chrome webdriver (compatible with headless mode)
 
@@ -106,15 +108,21 @@ def load_webdriver() -> WebDriver:
     WebDriver
     """
     try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+        options = Options()
+        if headless:
+            options.headless = True
+            options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     except WebDriverException:
-        from selenium.webdriver.chrome.options import Options
 
         options = Options()
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
 
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
