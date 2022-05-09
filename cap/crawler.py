@@ -1,21 +1,21 @@
 import os
-import json
-import glob
 import time
-
-from seqlbtoolkit.text import substring_mapping
-
-from .constants import *
 
 try:
     import pyautogui
     import shutil
+    from webdriver_manager.chrome import ChromeDriverManager
     from selenium import webdriver
     from selenium.webdriver.common.by import By
+    from selenium.webdriver.chrome.service import Service
+    from selenium.webdriver.chrome.webdriver import WebDriver
     from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.common.exceptions import NoSuchElementException
+    from selenium.common.exceptions import WebDriverException, NoSuchElementException
 except KeyError:
     pass
+
+from .constants import *
+from seqlbtoolkit.text import substring_mapping
 
 
 def scroll_down(driver_var, value):
@@ -49,10 +49,10 @@ def every_downloads_chrome(driver):
         """)
 
 
-def download_article_windows(doi, download_path, driver_path=None):
+def download_article_windows(doi, download_path):
 
     article_url = 'https://doi.org/' + doi
-    driver = webdriver.Chrome(executable_path=driver_path)
+    driver = load_webdriver()
 
     driver.get(article_url)
     scroll_down_page(driver)
@@ -89,15 +89,33 @@ def download_article_windows(doi, download_path, driver_path=None):
     driver.quit()
 
 
-def get_file_paths(input_dir: str):
-    if os.path.isfile(input_dir):
-        with open(input_dir, 'r', encoding='utf-8') as f:
-            file_list = json.load(f)
-    elif os.path.isdir(input_dir):
-        folder = input_dir
-        file_list = list()
-        for suffix in ('xml', 'html'):
-            file_list += glob.glob(os.path.join(folder, f"*.{suffix}"))
-    else:
-        raise FileNotFoundError("Input file does not exist!")
-    return file_list
+def download_article_headless(doi, save_path):
+
+    article_url = 'https://doi.org/' + doi
+    driver = load_webdriver()
+
+    driver.get(article_url)
+
+
+def load_webdriver() -> WebDriver:
+    """
+    A more robust way to load chrome webdriver (compatible with headless mode)
+
+    Returns
+    -------
+    WebDriver
+    """
+    try:
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
+    except WebDriverException:
+        from selenium.webdriver.chrome.options import Options
+
+        options = Options()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+
+    return driver

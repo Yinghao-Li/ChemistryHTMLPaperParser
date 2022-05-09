@@ -681,22 +681,29 @@ def search_xml_doi_publisher(root, publisher=None):
     return doi, publisher
 
 
-def parse_html(file_path: str) -> Tuple[Article, ArticleComponentCheck]:
+def parse_html(file_path: Optional[str] = None,
+               html_content: Optional[str] = None) -> Tuple[Article, ArticleComponentCheck]:
     """
     Parse html files
 
     Parameters
     ----------
     file_path: File name
+    html_content: html content. Cannot pass values to both file_path and html_content
 
     Returns
     -------
     article: Article, component check: ArticleComponentCheck
     """
-    file_path = os.path.normpath(file_path)
+    assert (file_path is None) != (html_content is None)
 
-    with open(file_path, 'r', encoding='utf-8') as f:
-        contents = f.read()
+    if file_path is not None:
+        file_path = os.path.normpath(file_path)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            contents = f.read()
+    else:
+        contents = html_content
+
     soup = BeautifulSoup(contents, 'lxml')
 
     # get publisher and doi

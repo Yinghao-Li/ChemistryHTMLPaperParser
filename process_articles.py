@@ -15,7 +15,7 @@ from cap.article_constr import (
     parse_xml
 )
 from cap.constants import CHAR_TO_HTML_LBS
-from cap.io import get_file_paths
+from cap.utils import get_file_paths
 
 logger = logging.getLogger(__name__)
 
