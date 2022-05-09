@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
 from typing import Optional, Union, List, Tuple
 
-from seqlbtoolkit.data import sort_tuples_by_element_idx
+from ..seqlbtoolkit.data import sort_tuples_by_element_idx
 
 from .table import Table
 from .paragraph import Paragraph, Sentence

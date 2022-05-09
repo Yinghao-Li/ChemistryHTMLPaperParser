@@ -4,7 +4,7 @@ import functools
 from typing import Optional, List, Union, Dict, Callable, Tuple
 from collections import OrderedDict
 
-from seqlbtoolkit.base_model.eval import Metric
+from ..seqlbtoolkit.base_model.eval import Metric
 
 logger = logging.getLogger(__name__)
 

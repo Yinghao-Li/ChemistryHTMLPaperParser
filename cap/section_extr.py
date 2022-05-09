@@ -3,7 +3,7 @@ import re
 import bs4
 import numpy as np
 from typing import List, Optional
-from seqlbtoolkit.text import format_text
+from ..seqlbtoolkit.text import format_text
 
 from .article import (
     ArticleElement,

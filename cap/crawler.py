@@ -17,7 +17,7 @@ except KeyError:
     pass
 
 from .constants import *
-from seqlbtoolkit.text import substring_mapping
+from ..seqlbtoolkit.text import substring_mapping
 
 
 def scroll_down(driver_var, value):
