@@ -2,7 +2,10 @@ import os
 import time
 from typing import Optional
 
-import pyautogui
+try:
+    import pyautogui
+except:
+    pass
 import shutil
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
