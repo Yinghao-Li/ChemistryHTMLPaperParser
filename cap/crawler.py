@@ -4,7 +4,7 @@ from typing import Optional
 
 try:
     import pyautogui
-except ImportError:
+except (ImportError, KeyError):
     pass
 import shutil
 from webdriver_manager.chrome import ChromeDriverManager
