@@ -308,7 +308,11 @@ class ArticleFunctions:
         article.abstract = abstract
 
         # --- get body sections ---
-        element_list = html_section_extract_acs(section_root=soup)
+        try:
+            content = soup.find_all('div', class_="article_content")[0]
+        except IndexError:
+            content = soup
+        element_list = html_section_extract_acs(section_root=content)
 
         if not element_list:
             # print('[Warning] No section is detected!')
@@ -355,7 +359,12 @@ class ArticleFunctions:
         article.abstract = abstract
 
         # --- get body sections ---
-        element_list = html_section_extract_elsevier(section_root=body)
+        try:
+            article_block = body.find_all('article')[0]
+        except IndexError:
+            article_block = body
+
+        element_list = html_section_extract_elsevier(section_root=article_block)
 
         if not element_list:
             # print('[Warning] No section is detected!')
@@ -449,14 +458,21 @@ class ArticleFunctions:
             article_component_check.abstract = False
         article.abstract = abs_paras
 
-        # get tables
+        # get tables and figures
         try:
             table_elements = list(doc.iter(tag=r'{http://www.elsevier.com/xml/common/dtd}table'))
+            figure_elements = list(doc.iter(tag=r'{http://www.elsevier.com/xml/common/dtd}figure'))
             section_list = []
             for table_element in table_elements:
                 tbl = xml_table_extract_elsevier(table_element)
                 tbl_element = ArticleElement(type=ArticleElementType.TABLE, content=tbl)
                 section_list.append(tbl_element)
+            for figure_element in figure_elements:
+                fig = xml_figure_extract(figure_element)
+                if not fig.caption:
+                    continue
+                fig_element = ArticleElement(type=ArticleElementType.FIGURE, content=fig)
+                section_list.append(fig_element)
         except Exception:
             section_list = []
 

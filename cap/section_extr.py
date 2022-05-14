@@ -3,7 +3,11 @@ import re
 import bs4
 import numpy as np
 from typing import List, Optional
-from ..seqlbtoolkit.text import format_text
+
+try:
+    from ..seqlbtoolkit.text import format_text
+except ImportError:
+    from seqlbtoolkit.text import format_text
 
 from .article import (
     ArticleElement,
@@ -14,12 +18,13 @@ from .table import (
     TableRow,
     TableCell
 )
+from .figure import Figure
 
 
 def pop_xml_element_iter(root, del_tag: List[str], popped_items: Optional[list] = None):
     if popped_items is None:
         popped_items = list()
-    for child in root.getchildren():
+    for child in root:
 
         if child.tag in del_tag:
             popped_items.append(child)
@@ -68,20 +73,28 @@ def xml_section_extract_acs(section_root, element_list=None) -> List[ArticleElem
     for child in section_root:
         if child.tag in ['label', 'title', 'p']:
             xml_tables = list()
+            xml_figures = list()
+
             if child.tag == 'label':
                 element_type = ArticleElementType.SECTION_ID
                 target_txt = get_xml_text_iter(child)
+
             elif child.tag == 'title':
                 element_type = ArticleElementType.SECTION_TITLE
                 target_txt = get_xml_text_iter(child)
+
             else:  # child.tag == 'p'
                 child_cp = copy.deepcopy(child)
                 items = pop_xml_element_iter(child_cp, [r'table-wrap', r'fig'])
                 for item in items:
                     if item.tag == r'table-wrap':
                         xml_tables.append(item)
+                    elif item.tag == r'fig':
+                        xml_figures.append(item)
+
                 element_type = ArticleElementType.PARAGRAPH
                 target_txt = get_xml_text_iter(child_cp)
+
             element = ArticleElement(type=element_type, content=target_txt)
             element_list.append(element)
 
@@ -90,12 +103,22 @@ def xml_section_extract_acs(section_root, element_list=None) -> List[ArticleElem
                 tbl = xml_table_extract_acs(xml_table)
                 element = ArticleElement(type=element_type, content=tbl)
                 element_list.append(element)
+
+            for xml_figure in xml_figures:
+                element_type = ArticleElementType.FIGURE
+                fig = xml_figure_extract(xml_figure)
+                if not fig.caption:
+                    continue
+                element = ArticleElement(type=element_type, content=fig)
+                element_list.append(element)
+
         elif child.tag == 'sec':
             xml_section_extract_acs(section_root=child, element_list=element_list)
+
     return element_list
 
 
-def html_section_extract_nature(section_root: bs4.element.Tag,
+def html_section_extract_nature(section_root,
                                 element_list: Optional[List] = None):
     """
     Depth-first search of the text in the sections
@@ -116,7 +139,11 @@ def html_section_extract_nature(section_root: bs4.element.Tag,
                 element_type = ArticleElementType.PARAGRAPH
                 target_txt = format_text(child.text)
                 element_list.append(ArticleElement(type=element_type, content=target_txt))
-            elif 'figure' in block_name or 'table' in block_name:
+            elif 'figure' in block_name:
+                element_type = ArticleElementType.FIGURE
+                fig = html_figure_extract_springer(child)
+                element_list.append(ArticleElement(type=element_type, content=fig))
+            elif 'table' in block_name:
                 continue
             else:
                 html_section_extract_nature(section_root=child, element_list=element_list)
@@ -125,7 +152,7 @@ def html_section_extract_nature(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_wiley(section_root: bs4.element.Tag,
+def html_section_extract_wiley(section_root,
                                element_list: Optional[List] = None):
     """
     Depth-first search of the text in the sections
@@ -158,7 +185,13 @@ def html_section_extract_wiley(section_root: bs4.element.Tag,
                 element_type = ArticleElementType.TABLE
                 tbl = html_table_extract_wiley(child)
                 element_list.append(ArticleElement(type=element_type, content=tbl))
-            elif 'figure' in child_name or 'table' in child_name:
+            elif 'figure' in child_name:
+                element_type = ArticleElementType.FIGURE
+                fig = html_figure_extract_wiley(child)
+                if not fig.caption:
+                    continue
+                element_list.append(ArticleElement(type=element_type, content=fig))
+            elif 'table' in child_name:
                 continue
             else:
                 html_section_extract_wiley(section_root=child, element_list=element_list)
@@ -167,7 +200,7 @@ def html_section_extract_wiley(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_rsc(section_root: bs4.element.Tag,
+def html_section_extract_rsc(section_root,
                              element_list: Optional[List] = None,
                              n_h2: Optional[int] = None):
     """
@@ -231,7 +264,9 @@ def html_section_extract_rsc(section_root: bs4.element.Tag,
                 continue
             # skip figures (for now)
             elif 'figure' in child_name or (child_name == 'div' and child_class == 'image_table'):
-                continue
+                fig = html_figure_extract_rsc(child)
+                element_type = ArticleElementType.FIGURE
+                element_list.append(ArticleElement(type=element_type, content=fig))
             else:
                 html_section_extract_rsc(section_root=child, element_list=element_list, n_h2=n_h2)
         except TypeError:
@@ -239,7 +274,7 @@ def html_section_extract_rsc(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_springer(section_root: bs4.element.Tag,
+def html_section_extract_springer(section_root,
                                   element_list: Optional[List] = None):
     """
     Depth-first search of the text in the sections
@@ -266,7 +301,11 @@ def html_section_extract_springer(section_root: bs4.element.Tag,
                 element_type = ArticleElementType.PARAGRAPH
                 target_txt = format_text(child.text)
                 element_list.append(ArticleElement(type=element_type, content=target_txt))
-            elif 'figure' in child_name or 'table' in child_name or (child_name == 'div' and child_class == 'Table'):
+            elif 'figure' in child_name:
+                element_type = ArticleElementType.FIGURE
+                fig = html_figure_extract_springer(child)
+                element_list.append(ArticleElement(type=element_type, content=fig))
+            elif 'table' in child_name or (child_name == 'div' and child_class == 'Table'):
                 continue
             elif child_name == 'div' and child_class == 'Table':
                 tbl = html_table_extract_springer(child)
@@ -280,7 +319,10 @@ def html_section_extract_springer(section_root: bs4.element.Tag,
                     tbl = html_table_extract_springer(table_element)
                     element_list.append(ArticleElement(type=element_type, content=tbl))
                 for s in child.find_all('figure'):
-                    s.extract()
+                    fig_element = s.extract()
+                    element_type = ArticleElementType.FIGURE
+                    fig = html_figure_extract_springer(fig_element)
+                    element_list.append(ArticleElement(type=element_type, content=fig))
 
                 if not child.find_all('p'):
                     element_type = ArticleElementType.PARAGRAPH
@@ -295,7 +337,7 @@ def html_section_extract_springer(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_aip(section_root: bs4.element.Tag,
+def html_section_extract_aip(section_root,
                              element_list: Optional[List] = None):
     if element_list is None:
         element_list = list()
@@ -341,7 +383,12 @@ def get_leaf_section_elements(soup: bs4.BeautifulSoup, text=None):
         tbl = html_table_extract_elsevier(soup)
         text.append(ArticleElement(type=element_type, content=tbl))
         text.append('')
+        return None
     elif 'figure' in block_name:
+        element_type = ArticleElementType.FIGURE
+        fig = html_figure_extract_elsevier(soup)
+        text.append(ArticleElement(type=element_type, content=fig))
+        text.append('')
         return None
 
     for child in soup.children:
@@ -352,7 +399,7 @@ def get_leaf_section_elements(soup: bs4.BeautifulSoup, text=None):
     return text
 
 
-def html_section_extract_elsevier(section_root: bs4.element.Tag,
+def html_section_extract_elsevier(section_root,
                                   element_list: Optional[List] = None,
                                   record_data: Optional[bool] = False):
     """
@@ -393,7 +440,8 @@ def html_section_extract_elsevier(section_root: bs4.element.Tag,
                     else:
                         continue
                 elif not child.find_all('section'):  # leaf section
-                    if record_data:
+                    if record_data or 'sec' in sec_id:
+
                         ele_list = get_leaf_section_elements(child)
                         new_list = list()
                         for ele in ele_list:
@@ -434,7 +482,10 @@ def html_section_extract_elsevier(section_root: bs4.element.Tag,
                     tbl = html_table_extract_elsevier(child)
                     element_list.append(ArticleElement(type=element_type, content=tbl))
             elif 'figure' in block_name:
-                continue
+                if record_data:
+                    element_type = ArticleElementType.FIGURE
+                    fig = html_figure_extract_elsevier(child)
+                    element_list.append(ArticleElement(type=element_type, content=fig))
             else:
                 html_section_extract_elsevier(
                     section_root=child,
@@ -446,7 +497,7 @@ def html_section_extract_elsevier(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_acs(section_root: bs4.element.Tag,
+def html_section_extract_acs(section_root,
                              element_list: Optional[List] = None):
     """
     Depth-first search of the text in the sections
@@ -468,13 +519,18 @@ def html_section_extract_acs(section_root: bs4.element.Tag,
             # if the child is a section block
             elif block_name == 'div':
                 div_class = child.get('class', [''])
-                # exclude all figures
-                for s in child.find_all('figure'):
-                    s.extract()
-
                 if len(div_class) == 0:
                     div_class = ['']
-                if div_class[0] == "NLM_p":
+
+                elif div_class[0] == "NLM_p":
+
+                    for s in child.find_all('figure'):
+                        fig_element = s.extract()
+                        element_type = ArticleElementType.FIGURE
+                        fig = html_figure_extract_acs(fig_element)
+                        element_list.append(ArticleElement(type=element_type, content=fig))
+                    html_section_extract_acs(section_root=child, element_list=element_list)
+
                     for s in child.find_all('div', {"class": "NLM_table-wrap"}):
                         table_element = s.extract()
                         element_type = ArticleElementType.TABLE
@@ -500,7 +556,7 @@ def html_section_extract_acs(section_root: bs4.element.Tag,
     return element_list
 
 
-def html_section_extract_aaas(section_root: bs4.element.Tag,
+def html_section_extract_aaas(section_root,
                               element_list: Optional[List] = None):
     """
     Depth-first search of the text in the sections
@@ -638,7 +694,20 @@ def xml_table_extract_acs(xml_table):
     return table.format_rows()
 
 
-def get_html_table_row(tr: bs4.element.Tag):
+def xml_figure_extract(xml_figure):
+    figure = Figure()
+    figure.id = xml_figure.attrib.get('id', None)
+
+    for child in xml_figure:
+        if 'label' in child.tag:
+            figure.label = child.text
+        elif 'caption' in child.tag:
+            figure.caption = get_xml_text_iter(child)
+
+    return figure
+
+
+def get_html_table_row(tr):
     """
     Get a row of the html table
 
@@ -660,7 +729,7 @@ def get_html_table_row(tr: bs4.element.Tag):
     return TableRow(cells)
 
 
-def get_html_table_rows(root: bs4.element.Tag, rows: Optional[List] = None, include_foot: Optional[bool] = True):
+def get_html_table_rows(root, rows: Optional[List] = None, include_foot: Optional[bool] = True):
     """
     get row elements from html table
     """
@@ -682,7 +751,7 @@ def get_html_table_rows(root: bs4.element.Tag, rows: Optional[List] = None, incl
     return rows
 
 
-def html_table_extract_wiley(table_div: bs4.element.Tag):
+def html_table_extract_wiley(table_div):
     headers = table_div.find_all('header')
     captions = list()
     for header in headers:
@@ -720,6 +789,33 @@ def html_table_extract_wiley(table_div: bs4.element.Tag):
     return tbl
 
 
+def html_figure_extract_wiley(html_figure):
+    figure_id = html_figure.get('id', '<EMPTY>')
+    label = ' '.join([lb.text for lb in html_figure.find_all("strong", class_="figure__title")])
+
+    caption = ' '.join([cap.text for cap in html_figure.find_all("div", class_="figure__caption-text")])
+    caption = format_text(caption)
+    figure = Figure(idx=figure_id,
+                    label=label,
+                    caption=caption)
+    return figure
+
+
+def html_figure_extract_springer(html_figure):
+    fig_idx_block = html_figure.figcaption.b
+    label = fig_idx_block.text
+    figure_id = fig_idx_block.get('id', '<EMPTY>')
+
+    try:
+        figure_content = html_figure.find_all('div', class_="c-article-section__figure-content")[0]
+        caption = figure_content.find_all('p')[0].text
+        caption = format_text(caption)
+    except IndexError:
+        caption = None
+
+    return Figure(idx=figure_id, label=label, caption=caption)
+
+
 def get_element_text_recursive(root, text=None):
     if text is None:
         text = list()
@@ -735,7 +831,7 @@ def get_element_text_recursive(root, text=None):
     return format_text(''.join(text))
 
 
-def html_table_extract_rsc(table_div: bs4.element.Tag):
+def html_table_extract_rsc(table_div):
     tables = table_div.find_all('table')
     if not tables:
         return Table()
@@ -777,7 +873,18 @@ def html_table_extract_rsc(table_div: bs4.element.Tag):
     return tbl
 
 
-def html_table_extract_springer(table_div: bs4.element.Tag):
+def html_figure_extract_rsc(html_figure):
+    try:
+        title = html_figure.find_all('td', class_="image_title")[0]
+        label = title.b.text.strip()
+        caption = ' '.join([cap.text for cap in title.find_all('span', class_="graphic_title")])
+        caption = format_text(caption)
+        return Figure(label=label, caption=caption)
+    except IndexError:
+        return Figure()
+
+
+def html_table_extract_springer(table_div):
     caption_divs = table_div.find_all('div', {"class": "Caption"})
     if caption_divs:
         caption_div = caption_divs[0]
@@ -809,7 +916,7 @@ def html_table_extract_springer(table_div: bs4.element.Tag):
     return tbl
 
 
-def get_acs_footnote(footnote_div: bs4.element.Tag):
+def get_acs_footnote(footnote_div):
     footnotes = list()
     pars = footnote_div.find_all('p')
     for p in pars:
@@ -826,7 +933,7 @@ def get_acs_footnote(footnote_div: bs4.element.Tag):
     return footnotes
 
 
-def html_table_extract_acs(table_div: bs4.element.Tag):
+def html_table_extract_acs(table_div):
     caption = ''
     table_id = table_div.get('id', '<EMPTY>')
     footnotes = list()
@@ -853,7 +960,13 @@ def html_table_extract_acs(table_div: bs4.element.Tag):
     return tbl
 
 
-def html_table_extract_elsevier(table_div: bs4.element.Tag):
+def html_figure_extract_acs(html_figure):
+    fig_id = html_figure.get('id', '<EMPTY>')
+    caption = format_text(html_figure.figcaption.text)
+    return Figure(idx=fig_id, caption=caption)
+
+
+def html_table_extract_elsevier(table_div):
     caption = ''
     table_id = table_div.get('id', '<EMPTY>')
     footnotes = list()
@@ -889,3 +1002,13 @@ def html_table_extract_elsevier(table_div: bs4.element.Tag):
         rows=rows,
         footnotes=footnotes).format_rows()
     return tbl
+
+
+def html_figure_extract_elsevier(html_figure):
+    fig_id = html_figure.get('id', '<EMPTY>')
+    try:
+        caption = format_text(html_figure.find_all('span', class_='captions')[0].text)
+    except IndexError:
+        caption = None
+
+    return Figure(idx=fig_id, caption=caption)

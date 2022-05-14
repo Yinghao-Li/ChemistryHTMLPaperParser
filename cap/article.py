@@ -8,9 +8,13 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
 from typing import Optional, Union, List, Tuple
 
-from ..seqlbtoolkit.data import sort_tuples_by_element_idx
+try:
+    from ..seqlbtoolkit.data import sort_tuples_by_element_idx
+except ImportError:
+    from seqlbtoolkit.data import sort_tuples_by_element_idx
 
 from .table import Table
+from .figure import Figure
 from .paragraph import Paragraph, Sentence
 from .constants import DEFAULT_HTML_STYLE
 
@@ -22,12 +26,13 @@ class ArticleElementType(Enum):
     SECTION_TITLE = 2
     PARAGRAPH = 3
     TABLE = 4
+    FIGURE = 5
 
 
 @dataclass
 class ArticleElement:
     type: ArticleElementType
-    content: Union[Paragraph, Table, str]
+    content: Union[Paragraph, Table, Figure, str]
 
     def __post_init__(self):
         if self.type == ArticleElementType.PARAGRAPH and isinstance(self.content, str):

@@ -4,7 +4,7 @@ from typing import Optional
 
 try:
     import pyautogui
-except:
+except ImportError:
     pass
 import shutil
 from webdriver_manager.chrome import ChromeDriverManager
@@ -17,7 +17,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
 
 from .constants import *
-from ..seqlbtoolkit.text import substring_mapping
+
+try:
+    from ..seqlbtoolkit.text import substring_mapping
+except ImportError:
+    from seqlbtoolkit.text import substring_mapping
 
 
 def scroll_down(driver_var, value):
