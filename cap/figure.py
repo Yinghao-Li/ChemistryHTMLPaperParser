@@ -23,6 +23,10 @@ class Figure:
     def caption(self):
         return self._caption if self._caption is not None else ''
 
+    @property
+    def text(self):
+        return self.__str__()
+
     @id.setter
     def id(self, idx):
         self._id = idx

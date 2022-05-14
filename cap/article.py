@@ -36,9 +36,10 @@ class ArticleElement:
 
     def __post_init__(self):
         if self.type == ArticleElementType.PARAGRAPH and isinstance(self.content, str):
-            # if len(self.content) == 0:
-            #     logger.warning("Encountered empty content!")
             self.content = Paragraph(text=self.content)
+
+        elif self.type == ArticleElementType.FIGURE and isinstance(self.content, Figure):
+            self.content = Paragraph(text=self.content.text)
 
 
 @dataclass
@@ -333,7 +334,7 @@ class Article:
                 sec_div.insert(len(sec_div), section_title)
                 section_title.insert(0, section.content)
 
-            elif section.type == ArticleElementType.PARAGRAPH:
+            elif section.type in [ArticleElementType.PARAGRAPH, ArticleElementType.FIGURE]:
                 paragraph = soup.new_tag('p')
                 sec_div.insert(len(sec_div), paragraph)
                 para = section.content
@@ -414,7 +415,7 @@ class Article:
                 if section.type == ArticleElementType.SECTION_TITLE:
                     txt_lines += f"\n{section.content}\n\n"
 
-                elif section.type == ArticleElementType.PARAGRAPH:
+                elif section.type in [ArticleElementType.PARAGRAPH, ArticleElementType.FIGURE]:
                     para = section.content
                     for (s, e), v in para.base_anno.items():
                         if v not in global_spans:
