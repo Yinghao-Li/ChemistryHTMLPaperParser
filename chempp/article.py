@@ -8,10 +8,7 @@ from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
 from typing import Optional, Union, List, Tuple
 
-try:
-    from ..seqlbtoolkit.data import sort_tuples_by_element_idx
-except ImportError:
-    from seqlbtoolkit.data import sort_tuples_by_element_idx
+from seqlbtoolkit.data import sort_tuples_by_element_idx
 
 from .table import Table
 from .figure import Figure

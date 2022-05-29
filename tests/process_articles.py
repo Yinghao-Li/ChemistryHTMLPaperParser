@@ -10,12 +10,12 @@ from dataclasses import dataclass, field
 from seqlbtoolkit.text import substring_mapping
 from seqlbtoolkit.io import set_logging, logging_args
 
-from cap.article_constr import (
+from chempp.article_constr import (
     parse_html,
     parse_xml
 )
-from cap.constants import CHAR_TO_HTML_LBS
-from cap.utils import get_file_paths
+from chempp.constants import CHAR_TO_HTML_LBS
+from chempp.utils import get_file_paths
 
 logger = logging.getLogger(__name__)
 

@@ -22,16 +22,17 @@ git submodule update --init
 
 ## Supported publishers:
 
-- RSC (HTML, w/ table)
-- Springer (HTML, w/ table)
-- Nature (HTML, w/o table)
-- Wiley (HTML, w/ table)
-- AIP (HTML, w/o table)
-- ACS (HTML & XML, w/ table)
-- Elsevier (HTML & XML, w/ table)
-- AAAS (Science) (HTML, w/o table)
+- RSC (HTML)
+- Springer (HTML)
+- Nature (HTML)
+- Wiley (HTML)
+- AIP (HTML)
+- ACS (HTML & XML)
+- Elsevier (HTML & XML)
+- AAAS (Science) (HTML)
 
-Figure parsing currently is not supported
+Table parsing is supported but not for all publishers.
+For figures, only figure captions are parsed in the current version.
 
 ## Example
 
@@ -39,8 +40,14 @@ Fork this repo and clone it to your local machine;
 
 To parse HTML files, run the following code:
 ```shell
-python parse_articles.py --input_dir </path/to/html/files> --parse_html
+python tests/parse_articles.py --input_dir </path/to/html/files> --parse_html
 ```
+or
+```shell
+cd tests
+python parse_articles.py config.json
+```
+where parameters are stored in file `config.json`.
 
 Add `--parse_xml` to the argument list to enable xml parsing.
 
