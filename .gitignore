@@ -132,7 +132,6 @@ dmypy.json
 # custom
 test-docs/
 output/
-*.ipynb
 *.db
 .flaskenv
 app.py
