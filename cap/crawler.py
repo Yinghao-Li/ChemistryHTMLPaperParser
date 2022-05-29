@@ -56,6 +56,9 @@ def every_downloads_chrome(driver):
 
 
 def download_article_windows(doi, download_path):
+    """
+    Deprecated. Should use `load_article_html` instead.
+    """
 
     article_url = 'https://doi.org/' + doi
     driver = load_webdriver()
@@ -95,12 +98,33 @@ def download_article_windows(doi, download_path):
     driver.quit()
 
 
-def download_article_headless(doi, save_path):
+def load_article_html(doi) -> str:
+    """
+    Load online articles and convert them to HTML strings
+
+    Parameters
+    ----------
+    doi: article DOI
+
+    Returns
+    -------
+    HTML string
+    """
 
     article_url = 'https://doi.org/' + doi
     driver = load_webdriver()
 
     driver.get(article_url)
+
+    if doi.startswith('10.1039'):
+        try:
+            driver.find_element(By.LINK_TEXT, 'Article HTML').click()
+            scroll_down_page(driver)
+        except NoSuchElementException:
+            pass
+
+    html_content = driver.page_source
+    return html_content
 
 
 def load_webdriver(headless: Optional[bool] = True) -> WebDriver:
