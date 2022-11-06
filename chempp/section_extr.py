@@ -4,10 +4,7 @@ import bs4
 import numpy as np
 from typing import List, Optional
 
-try:
-    from ..seqlbtoolkit.text import format_text
-except ImportError:
-    from seqlbtoolkit.text import format_text
+from seqlbtoolkit.text import format_text
 
 from .article import (
     ArticleElement,

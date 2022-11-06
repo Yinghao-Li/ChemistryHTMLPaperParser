@@ -2,10 +2,7 @@ import os
 import glob
 import json
 
-try:
-    from ..seqlbtoolkit.text import substring_mapping
-except ImportError:
-    from seqlbtoolkit.text import substring_mapping
+from seqlbtoolkit.text import substring_mapping
 
 from .constants import CHAR_TO_HTML_LBS, HTML_LBS_TO_CHAR
 

@@ -5,4 +5,4 @@ numpy~=1.19.2
 dataclasses~=0.8
 beautifulsoup4~=4.10.0
 selenium~=3.141.0
-SeqLbToolkit~=0.0.4
+SeqLbToolkit~=0.0.9
