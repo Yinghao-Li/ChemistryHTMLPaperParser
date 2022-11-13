@@ -6,3 +6,4 @@ dataclasses~=0.8
 beautifulsoup4~=4.10.0
 selenium~=3.141.0
 SeqLbToolkit~=0.0.9
+html5lib~=1.0.1
