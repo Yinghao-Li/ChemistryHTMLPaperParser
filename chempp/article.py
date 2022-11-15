@@ -313,7 +313,7 @@ class Article:
             for tag in tags_to_highlight:
                 spans = list(abs_para.get_anno_by_value(tag).keys())
                 if spans:
-                    abs_txt, inst_ids = html_mark_spans(abs_txt, spans, abs_para.text, tag, f"result-{inst_idx}")
+                    abs_txt, inst_ids = html_mark_spans(abs_txt, spans, abs_para.text, tag, f"$@${inst_idx}")
                     inst_idx += 1
 
                     if tag in tags_to_present:
@@ -340,7 +340,7 @@ class Article:
                 for tag in tags_to_highlight:
                     spans = list(para.get_anno_by_value(tag).keys())
                     if spans:
-                        txt, inst_ids = html_mark_spans(txt, spans, para.text, tag, f"result-{inst_idx}")
+                        txt, inst_ids = html_mark_spans(txt, spans, para.text, tag, f"$@${inst_idx}")
                         inst_idx += 1
 
                         if tag in tags_to_present:

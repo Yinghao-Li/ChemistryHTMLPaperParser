@@ -133,6 +133,9 @@ dmypy.json
 test-docs/
 output/
 *.db
+*.zip
+*.html
+*.ipynb
 .flaskenv
 app.py
 templates/
