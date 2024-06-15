@@ -12,7 +12,7 @@ See `requirements.txt`.
 Packages with versions specified in `requirements.txt` are used to test the code.
 Other versions are not fully tested but may also work.
 
-## Supported publishers:
+### Supported publishers:
 
 - RSC (HTML)
 - Springer (HTML)
@@ -28,20 +28,18 @@ For figures, only figure captions are parsed in the current version.
 
 ## 2. Example
 
-Fork this repo and clone it to your local machine;
+We use the open-access ACS article [Toland et al. 2023](https://pubs.acs.org/doi/10.1021/acs.jpca.3c05870#) as an example to demonstrate the article parsing process.
+The offline file is provided at `./examples/Toland.et.al.2023.html`.
+For online HTML files, you can either download the html files manually and load it as demonstrated below, or use the provided `chempp.crawler.load_online_html` function (requires external dependencies).
 
-To parse HTML files, run the following code:
-```shell
-python tests/parse_articles.py --input_dir </path/to/html/files> --parse_html
+To parse the example article, you can try the following example in your shell.
+```bash
+PYTHONPATH="." python examples/process_articles.py --input_dir ./examples/ --output_dir ./output/ --output_format pt
 ```
-or
-```shell
-cd tests
-python parse_articles.py config.json
-```
-where parameters are stored in file `config.json`.
+Notice that the `--input_dir` argument can either be the file path or a directory. If it is a directory, the program will try to read and parse all `html` and `xml` files in the folder.
+`--output_format` defines the output format of the parse file.
+`pt` will retain all structural information within an [`Article`]() class
 
-Add `--parse_xml` to the argument list to enable xml parsing.
 
 ## 3. Issues
 
@@ -54,3 +52,4 @@ It would be helpful for our improvement if you can report the failed cases in th
 - May fail to extract sections from Elsevier when section ids are `s[\d]+` instead of `sec[\d]+`, as mentioned in [this issue](https://github.com/Yinghao-Li/ChemistryHTMLPaperParser/issues/2).
 - Fails to extract abstracts from RSC due to updated HTML format, as mentioned in [this issue](https://github.com/Yinghao-Li/ChemistryHTMLPaperParser/issues/1).
 
+## Citation

@@ -1,11 +1,15 @@
-from typing import Optional
+"""
+# Author: Yinghao Li
+# Modified: June 15th, 2024
+# ---------------------------------------
+# Description: Define the Figure class
+"""
+
+__all__ = ["Figure"]
 
 
 class Figure:
-    def __init__(self,
-                 idx: Optional[str] = None,
-                 label: Optional[str] = None,
-                 caption: Optional[str] = None):
+    def __init__(self, idx: str = None, label: str = None, caption: str = None):
 
         self._id = idx
         self._label = label
@@ -17,11 +21,11 @@ class Figure:
 
     @property
     def label(self):
-        return self._label if self._label is not None else ''
+        return self._label if self._label is not None else ""
 
     @property
     def caption(self):
-        return self._caption if self._caption is not None else ''
+        return self._caption if self._caption is not None else ""
 
     @property
     def text(self):

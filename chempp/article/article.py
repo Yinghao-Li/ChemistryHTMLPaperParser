@@ -1,3 +1,10 @@
+"""
+# Author: Yinghao Li
+# Modified: June 15th, 2024
+# ---------------------------------------
+# Description: Define the Article class
+"""
+
 import json
 import pickle
 import functools
@@ -6,16 +13,18 @@ import logging
 from enum import Enum
 from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
-from typing import Optional, Union, List, Tuple
 
 from seqlbtoolkit.data import sort_tuples_by_element_idx
 
 from .table import Table
 from .figure import Figure
 from .paragraph import Paragraph, Sentence
-from .constants import DEFAULT_HTML_STYLE
+
+from chempp.utils import DEFAULT_HTML_STYLE
 
 logger = logging.getLogger(__name__)
+
+__all__ = ["Article", "ArticleElementType", "ArticleElement", "ArticleComponentCheck"]
 
 
 class ArticleElementType(Enum):
@@ -29,7 +38,7 @@ class ArticleElementType(Enum):
 @dataclass
 class ArticleElement:
     type: ArticleElementType
-    content: Union[Paragraph, Table, Figure, str]
+    content: Paragraph | Table | Figure | str
 
     def __post_init__(self):
         if self.type == ArticleElementType.PARAGRAPH and isinstance(self.content, str):
@@ -41,17 +50,19 @@ class ArticleElement:
 
 @dataclass
 class ArticleComponentCheck:
-    abstract: Optional[bool] = True
-    sections: Optional[bool] = True
+    abstract: bool = True
+    sections: bool = True
 
 
 class Article:
-    def __init__(self,
-                 doi: Optional[str] = None,
-                 publisher: Optional[str] = None,
-                 title: Optional[Union[Sentence, str]] = None,
-                 abstract: Optional[Union[Paragraph, str, List[str]]] = None,
-                 sections: Optional[List[ArticleElement]] = None):
+    def __init__(
+        self,
+        doi: str = None,
+        publisher: str = None,
+        title: Sentence | str = None,
+        abstract: Paragraph | str | list[str] = None,
+        sections: ArticleElement = None,
+    ):
 
         self._doi = doi
         self._publisher = publisher
@@ -71,10 +82,10 @@ class Article:
                 paras = list()
                 for para in self._abstract:
                     para = para.strip()
-                    if not para.endswith('.'):
-                        para += f'.'
+                    if not para.endswith("."):
+                        para += f"."
                     paras.append(para)
-                self._abstract = Paragraph('\n'.join(paras))
+                self._abstract = Paragraph("\n".join(paras))
         self._set_sec_id_to_sec()
 
     @property
@@ -120,22 +131,22 @@ class Article:
         self._publisher = publisher_
 
     @title.setter
-    def title(self, title_: Union[str, Sentence]):
+    def title(self, title_: str | Sentence):
         self._title = title_ if isinstance(title_, Sentence) else Sentence(title_)
         self._set_sec_id_to_sec()
 
     @abstract.setter
-    def abstract(self, abstract_: Union[Paragraph, str, List[str]]):
+    def abstract(self, abstract_: Paragraph | str | list[str]):
         if isinstance(abstract_, str):
             self._abstract = Paragraph(abstract_)
         elif isinstance(abstract_, list) and abstract_ and isinstance(abstract_[0], str):
             paras = list()
             for para in abstract_:
                 para = para.strip()
-                if not para.endswith('.'):
-                    para += '.'
+                if not para.endswith("."):
+                    para += "."
                 paras.append(para)
-            self._abstract = Paragraph(' '.join(paras))
+            self._abstract = Paragraph(" ".join(paras))
         else:
             self._abstract = abstract_
         self._set_sec_id_to_sec()
@@ -157,21 +168,21 @@ class Article:
                 new_sections.append(section)
         self._sections = new_sections
 
-    def __getitem__(self, item: Union[str, Tuple[str, int]]):
+    def __getitem__(self, item: str | tuple[str, int]):
         if isinstance(item, str):
             return self._sec_id_to_sec[item]
         elif isinstance(item, tuple):
-            if item[0] == 'title':
+            if item[0] == "title":
                 return self._sec_id_to_sec[item[0]]
             else:
                 return self._sec_id_to_sec[item[0]][item[1]]
 
     def _set_sec_id_to_sec(self):
-        self._sec_id_to_sec['title'] = self.title
-        self._sec_id_to_sec['abs'] = self.abstract
+        self._sec_id_to_sec["title"] = self.title
+        self._sec_id_to_sec["abs"] = self.abstract
         for i, sec in enumerate(self.sections):
             if sec.type == ArticleElementType.PARAGRAPH:
-                self._sec_id_to_sec[f'sec_{i}'] = sec.content
+                self._sec_id_to_sec[f"sec_{i}"] = sec.content
         return self
 
     @functools.lru_cache()
@@ -183,13 +194,13 @@ class Article:
         if include_title:
             sent_list.append(self.title.text)
             tokens_list.append(self.title.tokens)
-            inst_ids.append(('title', 0))
+            inst_ids.append(("title", 0))
 
         if self.abstract:
             for sent_idx, sent in enumerate(self.abstract.sentences):
                 sent_list.append(sent.text)
                 tokens_list.append(sent.tokens)
-                inst_ids.append(('abs', sent_idx))
+                inst_ids.append(("abs", sent_idx))
 
         for sec_idx, section in enumerate(self._sections):
             if section.type != ArticleElementType.PARAGRAPH:
@@ -197,7 +208,7 @@ class Article:
             for sent_idx, sent in enumerate(section.content.sentences):
                 sent_list.append(sent.text)
                 tokens_list.append(sent.tokens)
-                inst_ids.append((f'sec_{sec_idx}', sent_idx))  # section id, sentence idx
+                inst_ids.append((f"sec_{sec_idx}", sent_idx))  # section id, sentence idx
         return sent_list, tokens_list, inst_ids
 
     def save_pt(self, save_path):
@@ -212,7 +223,7 @@ class Article:
         -------
         self
         """
-        with open(save_path, 'wb') as handle:
+        with open(save_path, "wb") as handle:
             pickle.dump(self, handle, protocol=pickle.HIGHEST_PROTOCOL)
         return self
 
@@ -228,7 +239,7 @@ class Article:
         -------
         self
         """
-        with open(load_path, 'rb') as handle:
+        with open(load_path, "rb") as handle:
             article = pickle.load(handle)
         self.doi = article.doi
         self.title = article.title
@@ -236,11 +247,15 @@ class Article:
         self.abstract = article.abstract
         self.sections = article.sections
 
-    def save_html(self,
-                  save_path,
-                  html_style: Optional[str] = None,
-                  tags_to_highlight: Optional[list] = None,
-                  tags_to_present: Optional[list] = None):
+        return self
+
+    def save_html(
+        self,
+        save_path,
+        html_style: str = None,
+        tags_to_highlight: list = None,
+        tags_to_present: list = None,
+    ):
         """
         Save article instance as HTML files
 
@@ -260,9 +275,9 @@ class Article:
         tags_to_present = list() if tags_to_present is None else tags_to_present
 
         soup = BeautifulSoup()
-        head = soup.new_tag('head')
+        head = soup.new_tag("head")
         soup.insert(0, head)
-        title = soup.new_tag('title')
+        title = soup.new_tag("title")
         head.insert(0, title)
         title.insert(0, self.title.text)
 
@@ -270,30 +285,30 @@ class Article:
 
         viewport_meta = Tag(
             builder=soup.builder,
-            name='meta',
-            attrs={'name': "viewport", 'content': "width=device-width, initial-scale=1"}
+            name="meta",
+            attrs={"name": "viewport", "content": "width=device-width, initial-scale=1"},
         )
         head.insert(len(head), viewport_meta)
 
-        title = soup.new_tag('h1')
+        title = soup.new_tag("h1")
         head.insert(len(head), title)
         title.insert(0, self.title.text)
-        doi = soup.new_tag('p')
+        doi = soup.new_tag("p")
         head.insert(len(head), doi)
-        doi.insert(0, f'doi:')
-        doi_link = soup.new_tag('a', href=f'https://www.doi.org/{self.doi}')
-        doi_link.insert(0, f'{self.doi}')
+        doi.insert(0, f"doi:")
+        doi_link = soup.new_tag("a", href=f"https://www.doi.org/{self.doi}")
+        doi_link.insert(0, f"{self.doi}")
         doi.insert(len(doi), doi_link)
 
-        body = soup.new_tag('body')
+        body = soup.new_tag("body")
         soup.insert(len(soup), body)
 
         # save space for result sentences
-        result_div = soup.new_tag('div', id='results')
+        result_div = soup.new_tag("div", id="results")
         body.insert(len(body), result_div)
 
-        body.insert(len(body), soup.new_tag('hr'))
-        abs_div = soup.new_tag('div', id='abstract')
+        body.insert(len(body), soup.new_tag("hr"))
+        abs_div = soup.new_tag("div", id="abstract")
         body.insert(len(body), abs_div)
 
         inst_to_present = list()
@@ -301,11 +316,11 @@ class Article:
         inst_idx = 0
 
         if self.abstract:
-            abs_title = soup.new_tag('h2')
+            abs_title = soup.new_tag("h2")
             abs_div.insert(0, abs_title)
-            abs_title.insert(0, 'Abstract')
+            abs_title.insert(0, "Abstract")
 
-            abstract = soup.new_tag('p')
+            abstract = soup.new_tag("p")
             abs_div.insert(len(abs_div), abstract)
             abs_para = self.abstract
             abs_txt = abs_para.text
@@ -318,21 +333,21 @@ class Article:
 
                     if tag in tags_to_present:
                         for s, e in spans:
-                            inst_to_present.append(abs_para.text[s: e])
+                            inst_to_present.append(abs_para.text[s:e])
                         inst_idx_list += inst_ids
             abstract.insert(len(abstract), abs_txt)
 
-        sec_div = soup.new_tag('div', id='sections')
+        sec_div = soup.new_tag("div", id="sections")
         body.insert(len(body), sec_div)
         for section in self.sections:
 
             if section.type == ArticleElementType.SECTION_TITLE:
-                section_title = soup.new_tag('h2')
+                section_title = soup.new_tag("h2")
                 sec_div.insert(len(sec_div), section_title)
                 section_title.insert(0, section.content)
 
             elif section.type in [ArticleElementType.PARAGRAPH, ArticleElementType.FIGURE]:
-                paragraph = soup.new_tag('p')
+                paragraph = soup.new_tag("p")
                 sec_div.insert(len(sec_div), paragraph)
                 para = section.content
                 txt = para.text
@@ -345,7 +360,7 @@ class Article:
 
                         if tag in tags_to_present:
                             for s, e in spans:
-                                inst_to_present.append(section.content.text[s: e])
+                                inst_to_present.append(section.content.text[s:e])
                             inst_idx_list += inst_ids
                 paragraph.insert(len(paragraph), txt)
 
@@ -354,22 +369,22 @@ class Article:
 
         if inst_to_present:
             # save result sentences
-            result_title = soup.new_tag('h2')
+            result_title = soup.new_tag("h2")
             result_div.insert(len(result_div), result_title)
-            result_title.insert(0, 'results')
-            result_list = soup.new_tag('ol')
+            result_title.insert(0, "results")
+            result_list = soup.new_tag("ol")
             result_div.insert(len(result_div), result_list)
 
             for inst, idx in zip(inst_to_present, inst_idx_list):
-                result_p = soup.new_tag('li')
+                result_p = soup.new_tag("li")
                 result_list.insert(len(result_list), result_p)
                 result_p.insert(0, inst)
-                result_link = soup.new_tag('a', href=f'#{idx}')
+                result_link = soup.new_tag("a", href=f"#{idx}")
                 result_p.insert(len(result_p), result_link)
-                result_link.insert(0, '[link]')
+                result_link.insert(0, "[link]")
 
-        soup_str = soup.prettify().replace('&lt;', '<').replace('&gt;', '>')
-        with open(save_path, 'w', encoding='utf-8') as outfile:
+        soup_str = soup.prettify().replace("&lt;", "<").replace("&gt;", ">")
+        with open(save_path, "w", encoding="utf-8") as outfile:
             outfile.write(soup_str)
 
         return self
@@ -386,7 +401,7 @@ class Article:
         -------
         self
         """
-        txt_lines = ''
+        txt_lines = ""
         doi = self.doi
 
         txt_lines += f"doi: {doi}\n"
@@ -402,8 +417,7 @@ class Article:
             for (s, e), v in self.abstract.base_anno.items():
                 if v not in global_spans:
                     global_spans[v] = list()
-                global_spans[v].append((s + len(txt_lines),
-                                        e + len(txt_lines)))
+                global_spans[v].append((s + len(txt_lines), e + len(txt_lines)))
             txt_lines += f"{abstract}\n"
 
         if self.sections:
@@ -426,30 +440,28 @@ class Article:
             for span in spans:
                 labels_list.append([span[0], span[1], k])
 
-        result_dict = {
-            'text': txt_lines,
-            'label': labels_list,
-            'doi': doi
-        }
-        with open(save_path, 'w', encoding='utf-8') as f:
+        result_dict = {"text": txt_lines, "label": labels_list, "doi": doi}
+        with open(save_path, "w", encoding="utf-8") as f:
             json.dump(result_dict, f, ensure_ascii=False)
         return self
 
 
-def set_html_style(root: Tag, html_style: Optional[str] = None):
+def set_html_style(root: Tag, html_style: str = None):
     soup = BeautifulSoup()
-    style = soup.new_tag('style')
+    style = soup.new_tag("style")
     root.insert(len(root), style)
     html_style = DEFAULT_HTML_STYLE if not html_style else html_style
     style.insert(0, html_style)
     return root
 
 
-def html_mark_spans(text: str,
-                    spans: List[Tuple[int, int]],
-                    ori_text: Optional[str] = None,
-                    mark_class: Optional[str] = '',
-                    mark_id: Optional[str] = ''):
+def html_mark_spans(
+    text: str,
+    spans: list[tuple[int, int]],
+    ori_text: str = None,
+    mark_class: str = "",
+    mark_id: str = "",
+):
     """
     Wrap entity spans with HTML marker
 
@@ -467,6 +479,7 @@ def html_mark_spans(text: str,
     """
     if ori_text:
         import textspan
+
         spans = [(s[0][0], s[-1][-1]) for s in textspan.align_spans(spans, ori_text, text)]
     spans = sort_tuples_by_element_idx(spans)
 
@@ -477,7 +490,7 @@ def html_mark_spans(text: str,
     ids = list()
     while i < len(splitted_str):
         id_str = f"{mark_id}-{i}"
-        splitted_str[i] = f'<mark class={mark_class.lower()} id={id_str}>{splitted_str[i]}</mark>'
+        splitted_str[i] = f"<mark class={mark_class.lower()} id={id_str}>{splitted_str[i]}</mark>"
         i += 2
         ids.append(id_str)
-    return ''.join(splitted_str), ids
+    return "".join(splitted_str), ids

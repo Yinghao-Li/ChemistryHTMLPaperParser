@@ -134,9 +134,10 @@ test-docs/
 output/
 *.db
 *.zip
-*.html
 *.ipynb
+.DS_Store
 .flaskenv
+.vscode/
 app.py
 templates/
 static/

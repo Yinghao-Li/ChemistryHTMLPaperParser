@@ -1,5 +1,11 @@
+"""
+# Author: Yinghao Li
+# Modified: June 15th, 2024
+# ---------------------------------------
+# Description: Load online articles and convert them to HTML strings
+"""
+
 import time
-from typing import Optional
 
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium import webdriver
@@ -9,11 +15,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
 
-
-try:
-    from ..seqlbtoolkit.text import substring_mapping
-except ImportError:
-    from seqlbtoolkit.text import substring_mapping
+__all__ = ["load_online_html"]
 
 
 def scroll_down(driver_var, value):
@@ -36,7 +38,7 @@ def scroll_down_page(driver, n_max_try=100):
     return True
 
 
-def load_article_html(doi) -> str:
+def load_online_html(doi) -> str:
     """
     Load online articles and convert them to HTML strings
 
@@ -49,14 +51,14 @@ def load_article_html(doi) -> str:
     HTML string
     """
 
-    article_url = 'https://doi.org/' + doi
+    article_url = "https://doi.org/" + doi
     driver = load_webdriver()
 
     driver.get(article_url)
 
-    if doi.startswith('10.1039'):
+    if doi.startswith("10.1039"):
         try:
-            driver.find_element(By.LINK_TEXT, 'Article HTML').click()
+            driver.find_element(By.LINK_TEXT, "Article HTML").click()
             scroll_down_page(driver)
         except NoSuchElementException:
             pass
@@ -65,7 +67,7 @@ def load_article_html(doi) -> str:
     return html_content
 
 
-def load_webdriver(headless: Optional[bool] = True) -> WebDriver:
+def load_webdriver(headless: bool = True) -> WebDriver:
     """
     A more robust way to load chrome webdriver (compatible with headless mode)
 
@@ -77,18 +79,22 @@ def load_webdriver(headless: Optional[bool] = True) -> WebDriver:
         options = Options()
         if headless:
             options.headless = True
-            options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                                 "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+            options.add_argument(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
+            )
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 
     except WebDriverException:
 
         options = Options()
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36")
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36"
+        )
 
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
 

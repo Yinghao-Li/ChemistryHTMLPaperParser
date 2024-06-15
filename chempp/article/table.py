@@ -1,24 +1,32 @@
+"""
+# Author: Yinghao Li
+# Modified: June 15th, 2024
+# ---------------------------------------
+# Description: Define the TabelCell and Table classes
+"""
+
 import bs4
 import copy
 import json
 import numpy as np
 
 from dataclasses import dataclass
-from typing import Optional, List
 from bs4 import BeautifulSoup
+
+__all__ = ["TableCell", "TableRow", "Table"]
 
 
 @dataclass
 class TableCell:
     text: str
-    width: Optional[np.int8] = 1
-    height: Optional[np.int8] = 1
-    linked_top: Optional[bool] = False  # judge if the current cell belongs to the above multi-row cell
-    linked_left: Optional[bool] = False  # judge if the current cell belongs to the left multi-column cell
+    width: int = 1
+    height: int = 1
+    linked_top: bool = False  # judge if the current cell belongs to the above multi-row cell
+    linked_left: bool = False  # judge if the current cell belongs to the left multi-column cell
 
 
 class TableRow:
-    def __init__(self, cells: List[TableCell]):
+    def __init__(self, cells: list[TableCell]):
         self._cells = cells
         self._width = self._get_width()
         self._expanded_cells = self._expand_cells()
@@ -48,7 +56,7 @@ class TableRow:
     @cells.setter
     def cells(self, cells):
         new_widths = [cell.width for cell in cells]
-        assert self._width == new_widths, ValueError('The width must equal to the old one!')
+        assert self._width == new_widths, ValueError("The width must equal to the old one!")
         self._cells = cells
         self._expanded_cells = self._expand_cells()
 
@@ -57,7 +65,7 @@ class TableRow:
         raise AttributeError("Assigning values to `expanded_cells` is illegal!")
 
     def __str__(self):
-        cell_line = '\t'.join([cell.text for cell in self._cells]) + '\n'
+        cell_line = "\t".join([cell.text for cell in self._cells]) + "\n"
         return cell_line
 
     def __repr__(self):
@@ -90,12 +98,14 @@ class TableRow:
 
 
 class Table:
-    def __init__(self,
-                 label: Optional[str] = None,
-                 idx: Optional[str] = None,
-                 caption: Optional[str] = None,
-                 rows: Optional[List[TableRow]] = None,
-                 footnotes: Optional[List[str]] = None):
+    def __init__(
+        self,
+        label: str = None,
+        idx: str = None,
+        caption: str = None,
+        rows: list[TableRow] = None,
+        footnotes: list[str] = None,
+    ):
 
         self._label = label
         self._id = idx
@@ -113,7 +123,7 @@ class Table:
 
     @property
     def caption(self):
-        return self._caption if self._caption is not None else ''
+        return self._caption if self._caption is not None else ""
 
     @property
     def rows(self):
@@ -171,11 +181,11 @@ class Table:
             return self.rows[r].expanded_cells[c]
 
     def __str__(self):
-        lines = self._label if self._label else ''
-        lines += f' {self._caption}\n' if self._caption else ''
-        rows = ''.join([row.__str__() for row in self._rows])
+        lines = self._label if self._label else ""
+        lines += f" {self._caption}\n" if self._caption else ""
+        rows = "".join([row.__str__() for row in self._rows])
         lines += rows
-        lines += '\n'.join(self._footnotes) if self._footnotes else ''
+        lines += "\n".join(self._footnotes) if self._footnotes else ""
         return lines
 
     def __len__(self):
@@ -238,64 +248,59 @@ class Table:
             element_list.append(row_elements)
         return element_list
 
-    def write_html(self, root: Optional[bs4.element.Tag] = None):
+    def write_html(self, root: bs4.element.Tag = None):
         soup = BeautifulSoup()
 
         if root is None:
             root = BeautifulSoup()
-        html_table = soup.new_tag('table')
+        html_table = soup.new_tag("table")
         root.insert(len(root), html_table)
 
         if self.caption:
-            caption = soup.new_tag('caption')
+            caption = soup.new_tag("caption")
             html_table.insert(len(html_table), caption)
-            if self.label and self.label != '<EMPTY>':
-                cap_txt = f'{self.label} {self.caption}'
+            if self.label and self.label != "<EMPTY>":
+                cap_txt = f"{self.label} {self.caption}"
             else:
                 cap_txt = self.caption
             caption.insert(0, cap_txt)
 
-        tbody = soup.new_tag('tbody')
+        tbody = soup.new_tag("tbody")
         html_table.insert(len(html_table), tbody)
         for row in self.rows:
-            table_row = soup.new_tag('tr')
+            table_row = soup.new_tag("tr")
             tbody.insert(len(tbody), table_row)
 
             for entry in row.cells:
                 if entry.linked_top:
                     continue
-                table_data = soup.new_tag('td', colspan=str(entry.width), rowspan=str(entry.height))
+                table_data = soup.new_tag("td", colspan=str(entry.width), rowspan=str(entry.height))
                 table_row.insert(len(table_row), table_data)
                 table_data.insert(0, entry.text)
 
         if self.footnotes:
-            tfoot = soup.new_tag('tfoot')
+            tfoot = soup.new_tag("tfoot")
             html_table.insert(len(html_table), tfoot)
             for footnote in self.footnotes:
-                table_row = soup.new_tag('tr')
+                table_row = soup.new_tag("tr")
                 tfoot.insert(len(tfoot), table_row)
-                table_data = soup.new_tag('td', colspan=str(self.rows[0].width) if self.rows else 1)
+                table_data = soup.new_tag("td", colspan=str(self.rows[0].width) if self.rows else 1)
                 table_row.insert(0, table_data)
                 table_data.insert(0, footnote)
 
         return root
 
     def save_json(self, file_name):
-        json_elements = {
-            'caption': self.caption,
-            'body': self.body_to_lists(),
-            'footnotes': self.footnotes
-        }
-        with open(file_name, 'w', encoding='UTF-8') as f:
+        json_elements = {"caption": self.caption, "body": self.body_to_lists(), "footnotes": self.footnotes}
+        with open(file_name, "w", encoding="UTF-8") as f:
             json.dump(json_elements, f, indent=2, ensure_ascii=False)
 
 
 def set_table_style(root: bs4.element.Tag):
     soup = BeautifulSoup()
-    style = soup.new_tag('style')
+    style = soup.new_tag("style")
     root.insert(len(root), style)
-    style_string = \
-        """
+    style_string = """
         table {
           font-family: arial, sans-serif;
           border-collapse: collapse;

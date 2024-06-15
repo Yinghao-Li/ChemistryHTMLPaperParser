@@ -1,30 +1,37 @@
+"""
+# Author: Yinghao Li
+# Modified: June 15th, 2024
+# ---------------------------------------
+# Description: Sentence and Paragraph classes for text annotation
+"""
+
 import copy
 import logging
 import functools
-from typing import Optional, List, Union, Dict, Callable, Tuple
-from collections import OrderedDict
+from typing import Callable
 
-from seqlbtoolkit.base_model.eval import Metric
+from seqlbtoolkit.training.eval import Metric
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["Sentence", "Paragraph", "DEFAULT_ANNO_SOURCE"]
 
-DEFAULT_ANNO_SOURCE = '<DEFAULT>'
+DEFAULT_ANNO_SOURCE = "<DEFAULT>"
 
 
 class Sentence:
 
     def __init__(
-            self,
-            text: str,
-            start_idx: Optional[int] = None,
-            end_idx: Optional[int] = None,
-            anno: Optional[Union[Dict[str, Dict[Tuple[int, int], str]], Dict[Tuple[int, int], str]]] = None,
-            grouped_anno: Optional[List[Metric]] = None,
-            word_tokenizer: Optional[Callable] = None
+        self,
+        text: str,
+        start_idx: int = None,
+        end_idx: int = None,
+        anno: dict[str, dict[tuple[int, int], str]] | dict[tuple[int, int], str] = None,
+        grouped_anno: list[Metric] = None,
+        word_tokenizer: Callable = None,
     ):
         self._text = text
-        self._tokens: Union[List[str], None] = None
+        self._tokens: list[str] | None = None
         self._anno = anno
         self.start_idx = start_idx
         self.end_idx = end_idx
@@ -44,12 +51,15 @@ class Sentence:
             self.grouped_anno = list()
         self._tokens = self.word_tokenizer() if not self._word_tokenizer else self._word_tokenizer(self._text)
 
-    def word_tokenizer(self, text=None) -> List[str]:
+    def word_tokenizer(self, text=None) -> list[str]:
         if text is None:
             text = self._text
-        from chemdataextractor.nlp.tokenize import ChemWordTokenizer
-        cwt = ChemWordTokenizer()
-        tokens = cwt.tokenize(text)
+        # from chemdataextractor.nlp.tokenize import ChemWordTokenizer
+        import nltk
+
+        # cwt = ChemWordTokenizer()
+        # tokens = cwt.tokenize(text)
+        tokens = nltk.word_tokenize(text)
 
         return tokens
 
@@ -68,7 +78,7 @@ class Sentence:
         return self._tokens
 
     @tokens.setter
-    def tokens(self, tokens_: List[str]):
+    def tokens(self, tokens_: list[str]):
         self._tokens = tokens_
         logger.warning("Tokens have been changed! Make sure the tokens correspond to the text")
 
@@ -91,7 +101,7 @@ class Sentence:
         return annos
 
     @anno.setter
-    def anno(self, anno_: Union[Dict[str, Dict], Dict[Tuple[int, int], str]]):
+    def anno(self, anno_: dict[str, dict] | dict[tuple[int, int], str]):
         if anno_:
             if isinstance(list(anno_.keys())[0], str):
                 self._anno = anno_
@@ -102,7 +112,7 @@ class Sentence:
         else:
             logger.warning("Input annotation is emtpy!")
         try:
-            delattr(self, 'all_anno')
+            delattr(self, "all_anno")
         except Exception:
             pass
 
@@ -115,7 +125,7 @@ class Sentence:
     def __getitem__(self, item):
         return self.tokens[item]
 
-    def get_anno_with_value(self, value: Union[List[str], str]):
+    def get_anno_with_value(self, value: list[str] | str):
         if isinstance(value, str):
             value = [value]
         filtered_dict = dict(filter(lambda item: item[1] in value, self.all_anno.items()))
@@ -124,7 +134,7 @@ class Sentence:
     def remove_anno_overlaps(self):
         updated_dict = dict()
         for src in self.anno.keys():
-            sorted_dict = OrderedDict(sorted(self.anno[src].items()))
+            sorted_dict = dict(sorted(self.anno[src].items()))
             lb_span_dict = dict()
             for span, lb in sorted_dict.items():
 
@@ -140,23 +150,25 @@ class Sentence:
             tmp_dict = dict()
             for lb, span_sets in lb_span_dict.items():
                 for span_set in span_sets:
-                    tmp_dict[min(span_set), max(span_set)+1] = lb
+                    tmp_dict[min(span_set), max(span_set) + 1] = lb
 
-            updated_dict[src] = dict(OrderedDict(sorted(tmp_dict.items())))
+            updated_dict[src] = dict(sorted(tmp_dict.items()))
 
         self.anno = updated_dict
         return self
 
 
 class Paragraph:
-    def __init__(self,
-                 text: Optional[str] = None,
-                 sentences: Optional[List["Sentence"]] = None,
-                 anno: Optional[dict] = None,
-                 grouped_anno: Optional[List[Metric]] = None,
-                 sent_tokenizer: Optional[Callable] = None):
+    def __init__(
+        self,
+        text: str = None,
+        sentences: list["Sentence"] = None,
+        anno: dict = None,
+        grouped_anno: list[Metric] = None,
+        sent_tokenizer: Callable = None,
+    ):
         self._text = text
-        self._tokens: Union[List[str], None] = None
+        self._tokens: list[str] | None = None
 
         if anno is None:
             self._anno = {DEFAULT_ANNO_SOURCE: dict()}
@@ -178,10 +190,10 @@ class Paragraph:
 
             s_idx = 0
             for sent in sents:
-                self.sentences.append(Sentence(sent, s_idx, s_idx+len(sent)))
+                self.sentences.append(Sentence(sent, s_idx, s_idx + len(sent)))
                 s_idx += len(sent) + 1
 
-            self._text = ' '.join(sents)
+            self._text = " ".join(sents)
 
             self.update_sentence_anno()
 
@@ -189,11 +201,11 @@ class Paragraph:
             assert len(self.sentences) > 0, AttributeError("Assigning empty list to `sentences` is not allowed")
 
             start_idx = 0
-            self._text = ' ' * (self.sentences[-1].end_idx + 1)
+            self._text = " " * (self.sentences[-1].end_idx + 1)
             for sent in self.sentences:
-                assert sent.end_idx > sent.start_idx >= start_idx, ValueError('Sentences are overlapping!')
+                assert sent.end_idx > sent.start_idx >= start_idx, ValueError("Sentences are overlapping!")
                 start_idx = sent.end_idx
-                self._text[sent.start_idx: sent.end_idx] = sent.text
+                self._text[sent.start_idx : sent.end_idx] = sent.text
 
             self.update_paragraph_anno()
 
@@ -218,12 +230,16 @@ class Paragraph:
     def sentence_tokenizer(self, text=None):
         if text is None:
             text = self._text
-        from chemdataextractor.doc import Paragraph as CDEParagraph
-        para = CDEParagraph(text)
+        # from chemdataextractor.doc import Paragraph as CDEParagraph
 
-        sents = list()
-        for sent in para.sentences:
-            sents.append(sent.text)
+        # para = CDEParagraph(text)
+
+        # sents = list()
+        # for sent in para.sentences:
+        #     sents.append(sent.text)
+        import nltk
+
+        sents = nltk.sent_tokenize(text)
 
         return sents
 
@@ -242,7 +258,7 @@ class Paragraph:
         return self._tokens
 
     @tokens.setter
-    def tokens(self, tokens_: List[str]):
+    def tokens(self, tokens_: list[str]):
         self._tokens = tokens_
         logger.warning("Tokens have been changed! Make sure the tokens correspond to the text")
 
@@ -265,7 +281,7 @@ class Paragraph:
         return annos
 
     @anno.setter
-    def anno(self, anno_: Union[Dict[str, Dict], Dict[Tuple[int, int], str]]):
+    def anno(self, anno_: dict[str, dict] | dict[tuple[int, int], str]):
         if anno_:
             if isinstance(list(anno_.keys())[0], str):
                 self._anno = anno_
@@ -276,7 +292,7 @@ class Paragraph:
         else:
             logger.warning("Input annotation is emtpy!")
         try:
-            delattr(self, 'all_anno')
+            delattr(self, "all_anno")
         except Exception:
             pass
 
@@ -288,15 +304,15 @@ class Paragraph:
         self.update_paragraph_anno()
         return self
 
-    def update_paragraph_anno(self, sent_idx: Optional[int] = None):
+    def update_paragraph_anno(self, sent_idx: int = None):
         if sent_idx is None:
             for sent in self.sentences:
                 for src, anno in sent.anno.items():
                     if src not in self.anno.keys():
                         self.anno[src] = dict()
                     for (s, e), v in anno.items():
-                        if (s+sent.start_idx, e+sent.start_idx) not in self.anno[src]:
-                            self.anno[src][(s+sent.start_idx, e+sent.start_idx)] = v
+                        if (s + sent.start_idx, e + sent.start_idx) not in self.anno[src]:
+                            self.anno[src][(s + sent.start_idx, e + sent.start_idx)] = v
         elif isinstance(sent_idx, int):
             sent = self.sentences[sent_idx]
             for src, anno in sent.anno.items():
@@ -306,7 +322,7 @@ class Paragraph:
                     if (s + sent.start_idx, e + sent.start_idx) not in self.anno[src]:
                         self.anno[src][(s + sent.start_idx, e + sent.start_idx)] = v
         else:
-            raise ValueError(f'Unsupported index type: {type(sent_idx)}')
+            raise ValueError(f"Unsupported index type: {type(sent_idx)}")
 
         return self
 
@@ -332,7 +348,7 @@ class Paragraph:
                     self[sent_idx].anno[src][(sent_s, sent_e)] = v
         return self
 
-    def update_paragraph_anno_group(self, sent_idx: Optional[int] = None):
+    def update_paragraph_anno_group(self, sent_idx: int = None):
         """
         update paragraph annotation group
         """
@@ -346,13 +362,13 @@ class Paragraph:
                     for k in para_anno_group.keys():
                         if isinstance(para_anno_group[k], tuple) and len(para_anno_group[k]) == 2:
                             s, e = para_anno_group[k]
-                            para_anno_group[k] = (s+sent.start_idx, e+sent.start_idx)
+                            para_anno_group[k] = (s + sent.start_idx, e + sent.start_idx)
                         elif isinstance(para_anno_group[k], list) and len(para_anno_group[k]) > 0:
                             for i in range(len(para_anno_group[k])):
                                 anno_pair = para_anno_group[k][i]
                                 if isinstance(anno_pair, tuple) and len(anno_pair) == 2:
                                     s, e = anno_pair
-                                    para_anno_group[k][i] = (s+sent.start_idx, e+sent.start_idx)
+                                    para_anno_group[k][i] = (s + sent.start_idx, e + sent.start_idx)
                         else:
                             pass
                     anno_groups.append(para_anno_group)
@@ -369,14 +385,14 @@ class Paragraph:
                 for k in para_anno_group.keys():
                     if isinstance(para_anno_group[k], tuple) and len(para_anno_group[k]) == 2:
                         s, e = para_anno_group[k]
-                        para_anno_group[k] = (s+sent.start_idx, e+sent.start_idx)
+                        para_anno_group[k] = (s + sent.start_idx, e + sent.start_idx)
                 anno_groups.append(para_anno_group)
 
             self.grouped_anno += anno_groups
             self.grouped_anno = list(set(self.grouped_anno))
 
         else:
-            raise ValueError(f'Unsupported index type: {type(sent_idx)}')
+            raise ValueError(f"Unsupported index type: {type(sent_idx)}")
 
     def update_sentence_anno_group(self):
         raise NotImplementedError
@@ -390,7 +406,7 @@ class Paragraph:
     def __getitem__(self, item):
         return self.sentences[item]
 
-    def get_anno_by_value(self, value: Union[List[str], str]):
+    def get_anno_by_value(self, value: list[str] | str):
         if isinstance(value, str):
             value = [value]
         filtered_dict = dict(filter(lambda item: item[1] in value, self.all_anno.items()))
@@ -399,7 +415,7 @@ class Paragraph:
     def remove_anno_overlaps(self):
         updated_dict = dict()
         for src in self.anno.keys():
-            sorted_dict = OrderedDict(sorted(self.anno[src].items()))
+            sorted_dict = dict(sorted(self.anno[src].items()))
             lb_span_dict = dict()
             for span, lb in sorted_dict.items():
 
@@ -415,9 +431,9 @@ class Paragraph:
             tmp_dict = dict()
             for lb, span_sets in lb_span_dict.items():
                 for span_set in span_sets:
-                    tmp_dict[min(span_set), max(span_set)+1] = lb
+                    tmp_dict[min(span_set), max(span_set) + 1] = lb
 
-            updated_dict[src] = dict(OrderedDict(sorted(tmp_dict.items())))
+            updated_dict[src] = dict(sorted(tmp_dict.items()))
 
         self.anno = updated_dict
         return self

@@ -1,34 +1,41 @@
+__all__ = [
+    "SUPPORTED_HTML_PUBLISHERS",
+    "SUPPORTED_XML_PUBLISHERS",
+    "CHAR_TO_HTML_LBS",
+    "HTML_LBS_TO_CHAR",
+    "DEFAULT_HTML_STYLE",
+]
 
 # publishers
-SUPPORTED_HTML_PUBLISHERS = ['rsc', 'springer', 'nature', 'wiley', 'aip', 'acs', 'elsevier', 'aaas']
-SUPPORTED_XML_PUBLISHERS = ['acs', 'elsevier']
+SUPPORTED_HTML_PUBLISHERS = ["rsc", "springer", "nature", "wiley", "aip", "acs", "elsevier", "aaas"]
+SUPPORTED_XML_PUBLISHERS = ["acs", "elsevier"]
 
 # character mappings
 CHAR_TO_HTML_LBS = {
-    '/': '&sl;',
-    '\\': '&bs;',
-    '?': '&qm;',
-    '*': '&st;',
-    ':': '&cl;',
-    '|': '&vb;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    '\'': '&apos;'
+    "/": "&sl;",
+    "\\": "&bs;",
+    "?": "&qm;",
+    "*": "&st;",
+    ":": "&cl;",
+    "|": "&vb;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&apos;",
 }
 
 HTML_LBS_TO_CHAR = {
-    '&sl;': '/',
-    '&bs;': '\\',
-    '&qm;': '?',
-    '&st;': '*',
-    '&cl;': ':',
-    '&vb;': '|',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&apos;': '\'',
-    '&amp;': '&'
+    "&sl;": "/",
+    "&bs;": "\\",
+    "&qm;": "?",
+    "&st;": "*",
+    "&cl;": ":",
+    "&vb;": "|",
+    "&lt;": "<",
+    "&gt;": ">",
+    "&quot;": '"',
+    "&apos;": "'",
+    "&amp;": "&",
 }
 
 # html style
