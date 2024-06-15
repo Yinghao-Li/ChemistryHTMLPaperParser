@@ -10,7 +10,6 @@ import pickle
 import functools
 import itertools
 import logging
-from enum import Enum
 from dataclasses import dataclass
 from bs4 import BeautifulSoup, Tag
 
