@@ -20,19 +20,19 @@ from .table import Table
 from .figure import Figure
 from .paragraph import Paragraph, Sentence
 
-from chempp.utils import DEFAULT_HTML_STYLE
+from chempp.utils import DEFAULT_HTML_STYLE, StrEnum
 
 logger = logging.getLogger(__name__)
 
 __all__ = ["Article", "ArticleElementType", "ArticleElement", "ArticleComponentCheck"]
 
 
-class ArticleElementType(Enum):
-    SECTION_ID = 1
-    SECTION_TITLE = 2
-    PARAGRAPH = 3
-    TABLE = 4
-    FIGURE = 5
+class ArticleElementType(StrEnum):
+    SECTION_ID = "ID"
+    SECTION_TITLE = "TITLE"
+    PARAGRAPH = "PARAGRAPH"
+    TABLE = "TABLE"
+    FIGURE = "FIGURE"
 
 
 @dataclass
@@ -46,6 +46,9 @@ class ArticleElement:
 
         elif self.type == ArticleElementType.FIGURE and isinstance(self.content, Figure):
             self.content = Paragraph(text=self.content.text)
+
+    def __repr__(self):
+        return f"{self.type}: {self.content}"
 
 
 @dataclass
@@ -122,6 +125,18 @@ class Article:
                 paras.append(sec.content)
         return paras
 
+    @property
+    def tables(self):
+        return [sec.content for sec in self.sections if sec.type == ArticleElementType.TABLE]
+
+    @property
+    def figures(self):
+        return [sec.content for sec in self.sections if sec.type == ArticleElementType.FIGURE]
+
+    @property
+    def section_titles(self):
+        return [sec.content for sec in self.sections if sec.type == ArticleElementType.SECTION_TITLE]
+
     @doi.setter
     def doi(self, doi_: str):
         self._doi = doi_
@@ -167,6 +182,9 @@ class Article:
             elif section.content.text:
                 new_sections.append(section)
         self._sections = new_sections
+
+    def __repr__(self):
+        return f"Article(doi: {self.doi}, title: {self.title.text})"
 
     def __getitem__(self, item: str | tuple[str, int]):
         if isinstance(item, str):

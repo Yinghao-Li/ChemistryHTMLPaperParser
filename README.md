@@ -56,7 +56,7 @@ For online HTML files, you can either download the html files manually and load 
 
 To parse the example article, you can try the following example in your shell.
 ```bash
-PYTHONPATH="." python examples/process_articles.py --input_dir ./examples/ --output_dir ./output/ --output_format pt
+PYTHONPATH="." python ./examples/process_articles.py --input_dir ./examples/ --output_dir ./output/ --output_format pt
 ```
 The `--input_dir` argument can either be the file path or a directory. If it is a directory, the program will try to read and parse all `html` and `xml` files in the folder.
 `--output_format` defines the output format of the parse file.
@@ -65,7 +65,8 @@ The `--input_dir` argument can either be the file path or a directory. If it is 
 `html` saves the file as a simplified HTML for easy demonstration of the annotated sentences and tokens.
 It also is a good way to present the quality of the parsed article.
 
-Notice that `examples/process_articles.py` is only an incomplete demonstration of `chempp` APIs and their usage.
+Notice that [`./examples/process_articles.py`](./examples/process_articles.py) is only an incomplete demonstration of `chempp` APIs and their usage.
+The notebook [`./examples/example.ipynb`](./examples/example.ipynb) demonstrates the structure of the parsed `Article` object and some possible use cases.
 You can find more details regarding Chemistry Article Parser and its application in my [blog](https://yinghao-li.github.io/posts/2023/07/material-ie/).
 I'll provide more comprehensive API introduction if needed in the future.
 

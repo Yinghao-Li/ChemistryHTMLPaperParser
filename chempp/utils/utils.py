@@ -1,16 +1,13 @@
 import os
 import glob
 import json
+from enum import Enum
 
 from seqlbtoolkit.text import substring_mapping
 
 from .macro import CHAR_TO_HTML_LBS, HTML_LBS_TO_CHAR
 
-__all__ = [
-    "get_file_paths",
-    "map_doi_to_filename",
-    "map_filename_to_doi",
-]
+__all__ = ["get_file_paths", "map_doi_to_filename", "map_filename_to_doi", "StrEnum"]
 
 
 def get_file_paths(input_dir: str):
@@ -35,3 +32,16 @@ def map_doi_to_filename(doi):
 def map_filename_to_doi(filename):
     doi = substring_mapping(filename, HTML_LBS_TO_CHAR)
     return doi
+
+
+class StrEnum(str, Enum):
+    @classmethod
+    def options(cls):
+        opts = list()
+        for k, v in cls.__dict__.items():
+            if not k.startswith("_") and not isinstance(v, classmethod) and not is_callable(v):
+                try:
+                    opts.append(v.value)
+                except AttributeError:
+                    pass
+        return opts

@@ -134,7 +134,6 @@ test-docs/
 output/
 *.db
 *.zip
-*.ipynb
 .DS_Store
 .flaskenv
 .vscode/
